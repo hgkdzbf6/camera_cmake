@@ -3,9 +3,15 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-
 using namespace std;
+// enum afd{
+//     asd = 2
+// };
+
 int main(){
+
+    // cout << sizeof(afd) << endl;
+    
     //declare a capture object
     cv::VideoCapture cap(0 + cv::CAP_DSHOW);
     cap.open(0 + cv::CAP_DSHOW);

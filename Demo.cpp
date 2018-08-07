@@ -3,22 +3,16 @@
 #include <stdint.h>
 #include <pthread.h> 
 #include "DVPCamera.h"
-
-
 //#define TEST_TRIG
 //#define SOFT_TRIG
-
 void* test(void *p)
 {
-
 	dvpStatus status;
 	dvpHandle h;
 	dvpUint32 i,j,k;
 	bool trigMode = false;
-
 	char *name = (char*)p;
 	char PicName[64];
-
 	printf("test start, %s\r\n", name);
 	k = 0;
 	do 
@@ -101,6 +95,10 @@ void* test(void *p)
 					}
 				}
 #endif
+				printf("sdfasdfadsfads%d ",sizeof(frame));
+				printf("%d %d\n",
+				sizeof(frame.format),sizeof(frame.bits)
+				);
 				status = dvpGetFrame(h, &frame, &p, 1000);
 				if (status != DVP_STATUS_OK)
 				{
@@ -127,14 +125,8 @@ void* test(void *p)
 					frame.iHeight,
 					frame.uBytes,
 					frame.format);
-
-				// 
 				 				sprintf(PicName, "%s_pic_%d.jpg",name, k);
     				 				status = dvpSavePicture(&frame, p, PicName, 90);
-				// 				if (status == DVP_STATUS_OK)
-				// 				{
-				// 					printf("Save to %s OK\r\n", PicName);
-				// 				}
 
 				k++;
 			}        
