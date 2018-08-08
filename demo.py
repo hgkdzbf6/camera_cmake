@@ -1,15 +1,44 @@
+import sys
+sys.path.append('.')
+sys.path.append('../camera_cmake')
+sys.path.append('../config')
+from config import root_path, temp_path, pic_save_path
 from ctypes import *
 from threading import Thread
-
+import shutil
+import os
 class My_Thread(Thread):
-    def __init__(self,arg):
+    def __init__(self):
         Thread.__init__(self)
-        self.cur = arg[0]
-        self.name = arg[1]
-        self.bin_name = arg[2]
+        # 导入那个了
+        cur = cdll.LoadLibrary('./libdvp.so')
+        i=c_int(12)
+        count = pointer(i)
+        cur.dvpRefresh(count)
+        # print(i)
+        cameraInfo = dvpCameraInfo()
+        # print(sizeof(cameraInfo))
+        pcameraInfo = pointer(cameraInfo)
+        cur.dvpEnum(0, pcameraInfo)
+        raw_friendly_name = cameraInfo.FriendlyName
+        name = my_to_string(raw_friendly_name)
+        # print(cameraInfo.FriendlyName)
+        p_raw_friendly_name = c_char_p(raw_friendly_name)
+        void_p_raw_friendly_name = c_void_p()
+        void_p_raw_friendly_name = byref(p_raw_friendly_name)
+        # friendly_name = my_to_string(raw_friendly_name)
+        print(raw_friendly_name)
+
+        self.cur = cur
+        self.name = name
+        self.bin_name = void_p_raw_friendly_name
         self.h = c_int(0)
         self.ph = pointer(self.h)
+        self.save_count = 0
         self.str_name = create_string_buffer(bytes(self.name,encoding = 'utf8'),32)
+
+        self.start()
+        self.join()
 
     def open(self):
         status = self.cur.dvpOpenByName(self.str_name,1, self.ph)
@@ -41,7 +70,7 @@ class My_Thread(Thread):
         status = self.cur.dvpStart(self.h)
         print(status)
     
-    def save(self, name = 'one_pic.jpg'):
+    def save(self, path, name = 'one_pic.jpg'):
         hzd = cdll.LoadLibrary('./libhzd.so')
         c_name = create_string_buffer(bytes(name,encoding = 'utf8'),32)
         status = hzd.dvpSavePicture(
@@ -49,7 +78,12 @@ class My_Thread(Thread):
             self.p,
             c_name,
             100)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
+        shutil.copyfile(name, path+name)
         print(status)
+        self.save_count = self.save_count + 1
 
     def stop(self):
         status = self.cur.dvpStop(self.h)
@@ -61,11 +95,16 @@ class My_Thread(Thread):
         status = self.setGain(8.0)
         print(status)
         self.begin()
-        self.takePhoto()
-        self.save()
-        self.stop()
         pass
         
+    def process(self):    
+        self.takePhoto()
+        # 复制一份进行处理
+        self.save( temp_path,'one_pic.jpg')
+        # 复制第二份进行训练
+        the_path = pic_save_path + str(self.save_count) + '/'
+        the_name = 'one_pic_'+str(self.save_count)+'.jpg'
+        self.save( the_path ,the_name)
 
 class dvpRegion(Structure):
     _fields_=[
@@ -142,34 +181,10 @@ def my_to_string(char_array):
     s = str(foo_ptr_1.value, encoding = "utf8")
     return s
 
-def thread_saving():
-    pass
-
 def main():
-    # 导入那个了
-    cur = cdll.LoadLibrary('./libdvp.so')
-    i=c_int(12)
-    count = pointer(i)
-    cur.dvpRefresh(count)
-    # print(i)
-    cameraInfo = dvpCameraInfo()
-    # print(sizeof(cameraInfo))
-    pcameraInfo = pointer(cameraInfo)
-    cur.dvpEnum(0, pcameraInfo)
-    raw_friendly_name = cameraInfo.FriendlyName
-    name = my_to_string(raw_friendly_name)
-    # print(cameraInfo.FriendlyName)
-    p_raw_friendly_name = c_char_p(raw_friendly_name)
-    void_p_raw_friendly_name = c_void_p()
-    void_p_raw_friendly_name = byref(p_raw_friendly_name)
-    # friendly_name = my_to_string(raw_friendly_name)
-    print(raw_friendly_name)
-    the_thread = My_Thread([cur,
-        name,
-        void_p_raw_friendly_name])
-    the_thread.start()
-    the_thread.join()
-
-
+    the_thread = My_Thread()
+    the_thread.process()
+    # key_save(the_thread)
+    
 if __name__ == '__main__':
     main()
